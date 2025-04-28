@@ -48,4 +48,4 @@ This is particularly a good result on summarization and restating the author's m
 
 ### Note
 I thought the "1-2 sentence explanation of what you believe your grade should be" should be added to the readme file. When I realize I should upload this part to sakai, I already turned the work in... Here is my 1-2 sentence explanation:
-I am not sure how to exactly deduct points but my test-cases badge does not pass the tests. 
+I am not sure how to exactly deduct points but my test-cases badge does not pass the tests. I earn 2 extra credits for enabling asking questions in English when the document is non-english, I successfully tested this part with `news_spanish.txt` file. 
