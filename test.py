@@ -1,21 +1,17 @@
 #!/usr/bin/env python
-import argparse
-import readline
-import os
-import io
-import re
+import argparse, readline, os, io, re
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Your doctested helper functions
+# 1) Your LLm wrapper and helper functions (all doctested)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def llm(messages, temperature=1):
     """
     >>> llm([
-    ...     {'role':'system','content':'You are a helpful assistant.'},
-    ...     {'role':'user','content':'What is the capital of France?'}
+    ...   {'role':'system','content':'You are a helpful assistant.'},
+    ...   {'role':'user','content':'What is the capital of France?'}
     ... ], temperature=0)
     'The capital of France is Paris!'
     """
@@ -30,14 +26,11 @@ def llm(messages, temperature=1):
 
 def chunk_text_by_words(text: str, max_words: int=5, overlap: int=2) -> list[str]:
     """
-    Splits text into overlapping chunks by word count.
-
-    >>> text = "The quick brown fox jumps over the lazy dog. It was a sunny day."
-    >>> chunks = chunk_text_by_words(text, max_words=5, overlap=2)
-    >>> len(chunks)
-    3
-    >>> chunks[0]
-    'The quick brown fox jumps'
+    >>> text = "The quick brown fox jumps over the lazy dog."
+    >>> chunk_text_by_words(text, max_words=5, overlap=2)
+    ['The quick brown fox jumps',
+     'fox jumps over the lazy',
+     'over the lazy dog.']
     """
     words = text.split()
     if not (0 <= overlap < max_words):
@@ -50,7 +43,6 @@ def chunk_text_by_words(text: str, max_words: int=5, overlap: int=2) -> list[str
         i += step
     return chunks
 
-import re
 def score_chunk(chunk: str, query: str) -> float:
     """
     >>> round(score_chunk("The quick brown fox","quick fox jumps"),2)
@@ -60,9 +52,7 @@ def score_chunk(chunk: str, query: str) -> float:
     b = set(re.findall(r"\b\w+\b", query.lower()))
     if not a or not b:
         return 0.0
-    intersect = a & b
-    union = a | b
-    return len(intersect) / len(union)
+    return len(a & b) / len(a | b)
 
 def find_relevant_chunks(text: str, query: str, num_chunks: int=5) -> list[str]:
     """
@@ -95,77 +85,85 @@ def load_text(filepath_or_url: str) -> str:
         ext = os.path.splitext(filepath_or_url)[1].lower()
         with open(filepath_or_url,'rb') as f:
             raw = f.read()
-    if ext=='.txt':
+
+    if ext == '.txt':
         try: return raw.decode('utf-8')
         except: return raw.decode('latin-1')
-    if ext in ('.html',' .htm'):
+    if ext in ('.html','.htm'):
         from bs4 import BeautifulSoup
         return BeautifulSoup(raw,'html.parser').get_text(' ',strip=True)
-    if ext=='.pdf':
+    if ext == '.pdf':
         from PyPDF2 import PdfReader
         reader = PdfReader(io.BytesIO(raw))
         return "\n".join(p.extract_text() or '' for p in reader.pages).strip()
+
     raise ValueError(f"Unsupported file extension: {ext}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# main(): loads a document, summarizes, then enters a retrieval-augmented loop
+# 2) main(): CLI + summary + RAG loop
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
     load_dotenv()
 
-    p = argparse.ArgumentParser(description="DocChat: ask questions of a document")
-    p.add_argument("source", help="Path or URL of the document")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(
+        description="DocChat: ask questions of a document"
+    )
+    parser.add_argument(
+        "source",
+        help="Local file path or HTTP/HTTPS URL of the document"
+    )
+    args = parser.parse_args()
 
-    # 1) load text
+    # 1) load entire document
     doc = load_text(args.source)
 
-    # 2) summarize
+    # 2) ask LLM to summarize it in one or two sentences
     summary = llm([
-        {"role":"system","content":"You are a document summarizer."},
-        {"role":"user","content":
-            "Please summarize the following in one or two sentences:\n\n" + doc}
+        {"role":"system", "content":"You are a document summarizer."},
+        {"role":"user",   "content":
+            "请用一句话概括以下内容：\n\n" + doc}
     ], temperature=0.3)
 
-    # 3) set up history
+    # 3) init conversation history
     system_msg = (
-        "You are a helpful assistant that answers questions about the provided document. "
-        "Use the summary and relevant excerpts."
+        "你是一位文档问答助手，回答时请使用文档摘要和相关摘录作为依据。"
     )
     messages = [{"role":"system","content":system_msg}]
 
-    print("\nDocument loaded. Summary:\n", summary, "\n")
-    print("Ask questions (Ctrl-C to quit)\n")
+    print("\n文档已加载，摘要如下：\n", summary, "\n")
+    print("可开始提问 (Ctrl-C 退出)\n")
 
-    # 4) chat loop
+    # 4) 无限聊天循环
     while True:
-        q = input("docchat> ").strip()
-        if not q:
+        user_q = input("docchat> ").strip()
+        if not user_q:
             continue
 
-        # 5) retrieve
-        top5 = find_relevant_chunks(doc, q, num_chunks=5)
+        # 5) retrieve relevant chunks
+        top5 = find_relevant_chunks(doc, user_q, num_chunks=5)
         context = "\n\n".join(top5)
 
-        # 6) build prompt
+        # 6) build a grounded prompt
         prompt = (
-            f"Summary:\n{summary}\n\n"
-            f"Relevant excerpts:\n{context}\n\n"
-            f"Question: {q}\n"
-            "Answer clearly and concisely."
+            f"文档摘要：\n{summary}\n\n"
+            f"相关摘录：\n{context}\n\n"
+            f"问题：{user_q}\n"
+            "请用清晰、简洁的中文回答，必要时引用摘录。"
         )
 
-        messages.append({"role":"user","content":prompt})
-        ans = llm(messages)
-        messages.append({"role":"assistant","content":ans})
+        # 7) append user, call model, append assistant
+        messages.append({"role":"user",    "content":prompt})
+        answer = llm(messages)
+        messages.append({"role":"assistant","content":answer})
 
-        print("\n" + ans + "\n")
+        # 8) display the answer
+        print("\n" + answer + "\n")
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # 1) run all doctests
+    # 1) first run all doctests
     import doctest
     doctest.testmod(verbose=True)
-    # 2) then start the document‐chat loop
+    # 2) then launch the document‐chat
     main()
