@@ -436,9 +436,31 @@ def find_relevant_chunks(text: str, query: str, num_chunks: int = 5) -> list[str
     return [chunk for score, _, chunk in scored if score > 0][:num_chunks]
 
 
-
-
 if __name__ == '__main__':
+    import doctest
+    doctest.testmod(verbose=True)
+
+    messages = [{
+        'role': 'system',
+        'content': 'You are a helpful assistant.  You always speak like a pirate.  You always answer in 1 sentence.'
+    }]
+    while True:
+        text = input('docchat> ')
+        messages.append({'role': 'user', 'content': text})
+
+        result = llm(messages)
+
+        # now add the assistant’s reply into the history
+        messages.append({'role': 'assistant', 'content': result})
+
+        print('result=', result)
+        import pprint
+        pprint.pprint(messages)
+
+
+"""
+if __name__ == '__main__':
+    '''
     import doctest
     doctest.testmod(verbose=True)
     '''
@@ -466,4 +488,4 @@ if __name__ == '__main__':
         print('result=', result)
         import pprint
         pprint.pprint(messages)
-    '''
+"""
