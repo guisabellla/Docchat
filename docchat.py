@@ -7,9 +7,13 @@ import re
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1) Your LLm wrapper and helper functions (all doctested)
-# ─────────────────────────────────────────────────────────────────────────────
+try:
+    from langdetect import detect
+except ImportError:
+    def detect(text):
+        return 'en'
+
+LANG_NAME = {'en':'English','fr':'French','es':'Spanish','de':'German'}
 
 def llm(messages, temperature=1):
     '''
