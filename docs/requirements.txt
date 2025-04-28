@@ -1,0 +1,9 @@
+Dependencies of the program:
+
+Groq
+python-dotenv
+PyPDF2
+argparse
+Requests
+BeautifulSoup4
+lxml
