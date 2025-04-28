@@ -9,3 +9,4 @@ BeautifulSoup4
 lxml
 pyreadline3
 nltk
+urllib.parse
