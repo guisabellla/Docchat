@@ -46,6 +46,18 @@ def chunk_text_by_words(text, max_words=5, overlap=2):
     Splits text into overlapping chunks by word count.
 
     Examples:
+        >>> text = "The quick brown fox jumps over the lazy dog. It was a sunny day and the birds were singing."
+        >>> chunks = chunk_text_by_words(text, max_words=5, overlap=2)
+        >>> len(chunks)
+        7
+        >>> chunks[0]
+        'The quick brown fox jumps'
+        >>> chunks[1]
+        'fox jumps over the lazy'
+        >>> chunks[4]
+        'sunny day and the birds'
+        >>> chunks[-1]
+        'singing.'
     '''
     words = text.split()
     chunks = []
@@ -147,11 +159,23 @@ def load_text(filepath_or_url: str) -> str:
 
     Examples:
         >>> import tempfile, os
+        >>> # plain text
         >>> with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt') as f:
         ...     _ = f.write('Hello World')
         >>> load_text(f.name)
         'Hello World'
         >>> os.unlink(f.name)
+
+        >>> # HTML file
+        >>> with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.html') as f:
+        ...     _ = f.write('<html><body><h1>Title</h1><p>Para.</p></body></html>')
+        >>> load_text(f.name)
+        'Title Para.'
+        >>> os.unlink(f.name)
+
+        >>> # URL without extension → treated as HTML
+        >>> 'Example Domain' in load_text('http://example.com')
+        True
     """
     parsed = urlparse(filepath_or_url)
     is_url = parsed.scheme in ('http','https')
@@ -195,8 +219,13 @@ def find_relevant_chunks(text: str, query: str, num_chunks: int = 5) -> list[str
     Examples:
         >>> find_relevant_chunks("", "anything")
         []
+        >>> find_relevant_chunks("one two three four five", "")
+        []
         >>> find_relevant_chunks("short text only", "text", num_chunks=2)
         ['short text only']
+        >>> doc = "a b c d e f g h i j"
+        >>> find_relevant_chunks(doc, "g h", num_chunks=2)
+        ['g h i j', 'd e f g h']
     """
     words = text.split()
     max_w, overlap = 5, 2
@@ -212,19 +241,14 @@ def find_relevant_chunks(text: str, query: str, num_chunks: int = 5) -> list[str
     return [c for s,_,c in scored if s>0][:num_chunks]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2) Wrap all CLI logic in main()
-# ─────────────────────────────────────────────────────────────────────────────
 
 def summarize_by_chunks(doc: str) -> str:
     """
     Break `doc` into ~500-word overlapping chunks, summarize each in one sentence,
     then merge those micro-summaries into a final paragraph.
+    This function does not have a doctest because it is a summarization for large documents.
     """
-    # 1) chunk into ~500-word pieces
     chunks = chunk_text_by_words(doc, max_words=500, overlap=50)
-
-    # 2) get a micro-summary of each chunk
     micro_summaries = []
     for c in chunks:
         micro = llm([
@@ -233,7 +257,6 @@ def summarize_by_chunks(doc: str) -> str:
         ], temperature=0.3)
         micro_summaries.append(micro)
 
-    # 3) stitch those micro-summaries into a final summary
     joined = "\n".join(micro_summaries)
     final = llm([
         {"role": "system", "content": "You are a document summarizer."},
@@ -253,16 +276,13 @@ def main():
                         help="(Optional) Path to a file of one question per line")
     args = parser.parse_args()
 
-    # Load and summarize
     doc = load_text(args.source)
     summary = summarize_by_chunks(doc)
     print("\nDocument loaded. Summary:\n", summary, "\n")
 
-    # Base system message
     system_msg = "You are a document-grounded Q&A assistant. Use the summary and relevant excerpts."
     base = [{"role":"system","content":system_msg}]
 
-    # Batch mode
     if args.questions:
         with open(args.questions, encoding="utf-8") as f:
             for line in f:
@@ -283,7 +303,6 @@ def main():
                 print("A:", ans, "\n")
         return
 
-    # Interactive mode
     print("You may now ask questions (Ctrl-C to quit)\n")
     history = base.copy()
     while True:
@@ -305,7 +324,6 @@ def main():
         print("\n" + ans + "\n")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     import doctest
     doctest.testmod(verbose=True)
