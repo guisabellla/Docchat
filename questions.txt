@@ -1,2 +1,3 @@
 Summarize the document.
 What is the author's main argument?
+What are some key-words that frequently appear in the article? How many times do the key-words appear?
