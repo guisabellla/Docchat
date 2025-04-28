@@ -439,7 +439,7 @@ def find_relevant_chunks(text: str, query: str, num_chunks: int = 5) -> list[str
 if __name__ == '__main__':
     import doctest
     doctest.testmod(verbose=True)
-
+'''
     messages = [{
         'role': 'system',
         'content': 'You are a helpful assistant.  You always speak like a pirate.  You always answer in 1 sentence.'
@@ -456,7 +456,7 @@ if __name__ == '__main__':
         print('result=', result)
         import pprint
         pprint.pprint(messages)
-
+'''
 
 """
 if __name__ == '__main__':
