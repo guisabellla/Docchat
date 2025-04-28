@@ -1,4 +1,4 @@
-__pycache__/
+git rm -r --cached **/__pycache__
 *.py[cod]
 .DS_Store
 .env
