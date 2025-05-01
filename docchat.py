@@ -1,4 +1,24 @@
-#!/usr/bin/env python
+'''
+6: test case badge not working
+
+(The reason is your requirements.txt file should not contain the first line; 
+it should only contain the lines of the libraries that should be installed.  
+You can fix/resubmit for half credit)
+
+The --questions flag is a bit weird.  
+The idea behind it---to automate your testing of your program---is good, 
+but that's a less than ideal programmatically 
+because you are duplicating a lot of code between your two loops in your python file.  
+In the terminal, it is possible to write:
+
+$ python3 docchat.py news2.txt < questions.txt
+
+The < is called "input redirection" and allows you to pass a file as input to a program.  
+This works with any program without any need for modifying the source code.  
+I will give you an additional 2 points back from the test cases above if: 
+you modify your dochat.py to remove the extra code and add an example using input redirection.
+'''
+
 import argparse
 import readline
 import os
