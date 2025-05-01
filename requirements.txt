@@ -1,5 +1,3 @@
-Dependencies of the program:
-
 Groq
 python-dotenv
 PyPDF2
