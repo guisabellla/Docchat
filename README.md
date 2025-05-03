@@ -8,20 +8,20 @@ The program is good at summarizing texts for documents and main argument of a te
 
 The format of the command is:
 ```
-python docchat.py path/to/document.txt < questions.txt
+python docchat.py path\to\document.txt < questions.txt
 ```
 This command supposedly works for barch mode using input redirection.
 
 However, mine is a windows powershell, so instead, this command works on windows computer:
 ```
-Get-Content questions.txt | python docchat.py path/to/document.txt
+Get-Content questions.txt | python docchat.py path\to\document.txt
 ```
 
 
 ### Try:
 When I enter the command in python terminal:
 ```
-Get-Content questions.txt | python docchat.py docs/news2.txt
+Get-Content questions.txt | python docchat.py docs\news2.txt
 ```
 
 I get the result:
@@ -55,7 +55,7 @@ The `news_spanish.txt` file in the `docs` folder is a document written in Spanis
 My command is:
 
 ```
-Get-Content questions.txt | python docchat.py docs/news_spanish.txt
+Get-Content questions.txt | python docchat.py docs\news_spanish.txt
 ```
 The questions in the `questions.txt` is the same as last try. I did not add any new command like asking for translation.
 I get the result:
