@@ -1,23 +1,15 @@
-'''
-6: test case badge not working
+#!/usr/bin/env python
+"""
+DocChat: ask questions of a document.
 
-(The reason is your requirements.txt file should not contain the first line; 
-it should only contain the lines of the libraries that should be installed.  
-You can fix/resubmit for half credit)
+Usage:
 
-The --questions flag is a bit weird.  
-The idea behind it---to automate your testing of your program---is good, 
-but that's a less than ideal programmatically 
-because you are duplicating a lot of code between your two loops in your python file.  
-In the terminal, it is possible to write:
+  # Batch mode using input redirection:
+  python docchat.py path/to/news2.txt < questions.txt
 
-$ python3 docchat.py news2.txt < questions.txt
-
-The < is called "input redirection" and allows you to pass a file as input to a program.  
-This works with any program without any need for modifying the source code.  
-I will give you an additional 2 points back from the test cases above if: 
-you modify your dochat.py to remove the extra code and add an example using input redirection.
-'''
+  # On Windows PowerShell you can do:
+  Get-Content questions.txt | python docchat.py path/to/news2.txt
+"""
 
 import argparse
 import readline
@@ -26,6 +18,7 @@ import io
 import re
 from urllib.parse import urlparse
 from dotenv import load_dotenv
+load_dotenv()
 
 try:
     from langdetect import detect
@@ -288,46 +281,32 @@ def summarize_by_chunks(doc: str) -> str:
     return final
 
 def main():
-    load_dotenv()
-
-    parser = argparse.ArgumentParser(description="DocChat: ask questions of a document")
-    parser.add_argument("source", help="Path or URL of the document to load")
-    parser.add_argument("--questions",
-                        help="(Optional) Path to a file of one question per line")
+    parser = argparse.ArgumentParser(
+        description="DocChat: ask questions of a document"
+    )
+    parser.add_argument(
+        "source",
+        help="Path or URL of the document to load"
+    )
     args = parser.parse_args()
 
     doc = load_text(args.source)
     summary = summarize_by_chunks(doc)
     print("\nDocument loaded. Summary:\n", summary, "\n")
+    print("Now you can ask questions (Ctrl-D to quit):\n")
 
     system_msg = "You are a document-grounded Q&A assistant. Use the summary and relevant excerpts."
-    base = [{"role":"system","content":system_msg}]
+    history = [{"role": "system", "content": system_msg}]
 
-    if args.questions:
-        with open(args.questions, encoding="utf-8") as f:
-            for line in f:
-                q = line.strip()
-                if not q: continue
-
-                chunks = find_relevant_chunks(doc, q, num_chunks=5)
-                context = "\n\n".join(chunks)
-                prompt = (
-                    f"Summary:\n{summary}\n\n"
-                    f"Relevant excerpts:\n{context}\n\n"
-                    f"Question: {q}\n"
-                    "Answer clearly and concisely."
-                )
-                messages = base + [{"role":"user","content":prompt}]
-                ans = llm(messages)
-                print("Q:", q)
-                print("A:", ans, "\n")
-        return
-
-    print("You may now ask questions (Ctrl-C to quit)\n")
-    history = base.copy()
     while True:
-        q = input("docchat> ").strip()
-        if not q: continue
+        try:
+            q = input("docchat> ").strip()
+        except EOFError:
+            print("\nGoodbye!")
+            break
+
+        if not q:
+            continue
 
         chunks = find_relevant_chunks(doc, q, num_chunks=5)
         context = "\n\n".join(chunks)
@@ -338,9 +317,9 @@ def main():
             "Answer clearly and concisely."
         )
 
-        history.append({"role":"user","content":prompt})
+        history.append({"role": "user", "content": prompt})
         ans = llm(history)
-        history.append({"role":"assistant","content":ans})
+        history.append({"role": "assistant", "content": ans})
         print("\n" + ans + "\n")
 
 
